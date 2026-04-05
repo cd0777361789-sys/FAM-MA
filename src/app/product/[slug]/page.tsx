@@ -451,7 +451,7 @@ export default function ProductLandingPage() {
                 {[
                   { i: '🚚', t: 'توصيل مجاني', d: 'لجميع المدن' },
                   { i: '💰', t: 'الدفع عند الاستلام', d: 'بدون أي مخاطرة' },
-                  { i: '🛡️', t: 'ضمان 7 أيام', d: 'إرجاع مجاني' },
+                  { i: '�', t: 'دعم متواصل', d: 'خدمة عملاء 24/7' },
                   { i: '✅', t: 'منتج أصلي', d: 'جودة مضمونة' },
                 ].map((x, i) => (
                   <div key={i} className="landing-trust-item">
@@ -656,10 +656,10 @@ export default function ProductLandingPage() {
             <div className="w-20 h-20 mx-auto mb-5 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #C9A94E, #E0C976)', boxShadow: '0 8px 24px rgba(201,169,78,0.3)' }}>
               <span className="text-3xl">🛡️</span>
             </div>
-            <h3 className="text-xl font-bold mb-3 font-amiri" style={{ color: '#2C1810' }}>ضمان الرضا الكامل 100%</h3>
-            <p className="text-[13px] max-w-lg mx-auto leading-[1.9]" style={{ color: '#6B5D52' }}>نحن واثقون من جودة منتجاتنا. إذا لم يناسبك المنتج لأي سبب، يمكنك إرجاعه خلال 7 أيام واسترجاع أموالك كاملة بدون أي أسئلة.</p>
+            <h3 className="text-xl font-bold mb-3 font-amiri" style={{ color: '#2C1810' }}>ضمان الجودة 100%</h3>
+            <p className="text-[13px] max-w-lg mx-auto leading-[1.9]" style={{ color: '#6B5D52' }}>نحن نختار لك فقط المنتجات المميزة من أفضل العلامات التجارية. كل منتج تم اختباره والتأكد من جودته قبل عرضه عليك.</p>
             <div className="flex flex-wrap justify-center gap-5 mt-6">
-              {['✓ ضمان الجودة', '✓ إرجاع مجاني', '✓ توصيل آمن', '✓ دعم 24/7'].map((g, i) => (
+              {['✓ جودة مضمونة', '✓ منتجات مختارة بعناية', '✓ توصيل آمن', '✓ دعم 24/7'].map((g, i) => (
                 <span key={i} className="text-[11px] font-bold" style={{ color: '#006233' }}>{g}</span>
               ))}
             </div>

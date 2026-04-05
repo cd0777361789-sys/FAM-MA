@@ -196,7 +196,7 @@ export default function HomePage() {
               { icon: '🚚', text: 'توصيل لجميع المدن', sub: 'خلال 24-48 ساعة' },
               { icon: '💰', text: 'الدفع عند الاستلام', sub: 'بدون رسوم إضافية' },
               { icon: '✨', text: 'منتجات أصلية', sub: 'جودة مضمونة 100%' },
-              { icon: '↩️', text: 'إرجاع سهل', sub: 'خدمة عملاء متوفرة' },
+              { icon: '📞', text: 'خدمة عملاء', sub: 'دعم متواصل 24/7' },
             ].map((badge, i) => (
               <div key={i} className="flex items-center gap-3 min-w-[200px] md:min-w-0 snap-start p-3 rounded-xl bg-white/60">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0" style={{ backgroundColor: '#FDF8F0' }}>
@@ -300,9 +300,9 @@ export default function HomePage() {
           <SectionHeader badge="من نحن" title="قصة FAM.MA" />
           <div className="bg-white rounded-2xl p-8 shadow-sm">
             <p className="text-base leading-[1.9]" style={{ color: '#4A3228' }}>
-              نحن متجر مغربي متخصص في الأزياء والمجوهرات الأصيلة. نسعى لتقديم أفضل المنتجات المغربية التقليدية والعصرية
-              بأسعار مناسبة وجودة عالية. كل قطعة في مجموعتنا تحمل لمسة من التراث المغربي العريق مع تصاميم عصرية
-              تناسب ذوق المرأة المغربية الحديثة.
+              FAM.MA منصة مغربية نختار لك أفضل المنتجات من أجود العلامات التجارية ونوصلها لباب دارك.
+              نبحث ونختبر ونقارن عشرات المنتجات باش نقدمو لك غير اللي يستاهل — بأسعار مدروسة وتوصيل سريع لجميع مدن المغرب.
+              مهمتنا هي أننا نوفرو عليك الوقت والجهد ونضمنو لك تجربة تسوق سهلة وممتعة.
             </p>
           </div>
         </div>
@@ -320,8 +320,8 @@ export default function HomePage() {
                 <span className="text-lg font-bold" style={{ color: '#C9A94E' }}>FAM.MA</span>
               </div>
               <p className="text-white/50 text-sm leading-relaxed">
-                متجر الأزياء والمجوهرات المغربية الراقية
-                <br />جودة · أصالة · أناقة
+                نختار لك أفضل المنتجات من أجود العلامات
+                <br />جودة · تميّز · توصيل سريع
               </p>
             </div>
             <div>
