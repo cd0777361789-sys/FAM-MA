@@ -11,11 +11,12 @@ interface Product {
   category_name_ar?: string; landing_title_ar?: string; landing_subtitle_ar?: string;
   landing_features_ar?: string; landing_cta_ar?: string; landing_testimonials?: string;
   landing_gallery?: string; landing_video_url?: string; landing_offer_badge_ar?: string;
-  landing_faq_ar?: string; landing_extra_sections?: string;
+  landing_faq_ar?: string; landing_extra_sections?: string; landing_offers?: string;
 }
 interface Testimonial { name: string; city: string; text: string; rating: number; }
 interface FAQ { question: string; answer: string; }
 interface ExtraSection { title: string; content: string; image?: string; }
+interface Offer { title: string; description: string; discount: string; active: boolean; }
 
 const CITIES = [
   'الدار البيضاء','الرباط','فاس','مراكش','طنجة','مكناس','أكادير','وجدة','القنيطرة','تطوان',
@@ -184,6 +185,7 @@ export default function ProductLandingPage() {
   const gallery: string[] = jp(product.landing_gallery, []);
   const faqs: FAQ[] = jp(product.landing_faq_ar, []);
   const extras: ExtraSection[] = jp(product.landing_extra_sections, []);
+  const activeOffers: Offer[] = jp<Offer[]>(product.landing_offers, []).filter(o => o.active);
   const videoUrl = product.landing_video_url || '';
   const hasVideo = !!videoUrl;
   const allImages = [product.main_image, ...gallery].filter(Boolean) as string[];
@@ -487,6 +489,34 @@ export default function ProductLandingPage() {
                 <div key={i} className="landing-feature-card" style={{ animationDelay: `${i * 80}ms` }}>
                   <div className="landing-feature-num">{i + 1}</div>
                   <p className="text-[13px] font-semibold leading-relaxed flex-1" style={{ color: '#2C1810' }}>{f}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </FadeSection>
+      )}
+
+      {/* ===== SPECIAL OFFERS ===== */}
+      {activeOffers.length > 0 && (
+        <FadeSection className="py-12 md:py-16" style={{ background: 'linear-gradient(135deg, #FDF8F0, #FFF7ED)' }}>
+          <div className="max-w-4xl mx-auto px-4">
+            <SectionTitle title="🏷️ عروض خاصة" sub="استفيدي من العروض الحصرية" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+              {activeOffers.map((offer, i) => (
+                <div key={i} className="relative rounded-2xl p-5 overflow-hidden" style={{ background: 'linear-gradient(135deg, #FFFFFF, #FDF8F0)', border: '2px solid #C9A94E', boxShadow: '0 4px 20px rgba(201,169,78,0.15)' }}>
+                  <div className="absolute top-0 left-0 w-full h-1" style={{ background: 'linear-gradient(90deg, #C9A94E, #C41E3A, #C9A94E)' }} />
+                  {offer.discount && (
+                    <div className="absolute top-3 left-3 px-3 py-1 rounded-full text-[11px] font-extrabold text-white" style={{ background: 'linear-gradient(135deg, #C41E3A, #A01830)', boxShadow: '0 2px 8px rgba(196,30,58,0.3)' }}>
+                      {offer.discount}
+                    </div>
+                  )}
+                  <div className="pt-2">
+                    <h3 className="text-[15px] font-bold mb-2" style={{ color: '#2C1810' }}>{offer.title}</h3>
+                    <p className="text-[12px] leading-[1.8]" style={{ color: '#6B5D52' }}>{offer.description}</p>
+                  </div>
+                  <button onClick={scrollToOrder} className="mt-4 w-full py-2.5 rounded-xl text-[12px] font-bold text-white transition hover:opacity-90" style={{ background: 'linear-gradient(135deg, #C41E3A, #A01830)' }}>
+                    اطلبي الآن واستفيدي من العرض
+                  </button>
                 </div>
               ))}
             </div>

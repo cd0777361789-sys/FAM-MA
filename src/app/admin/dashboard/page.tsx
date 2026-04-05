@@ -53,6 +53,7 @@ interface Product {
   landing_offer_badge_ar?: string;
   landing_faq_ar?: string;
   landing_extra_sections?: string;
+  landing_offers?: string;
   category_id?: string;
 }
 
@@ -711,6 +712,7 @@ function ProductFormModal({
     landing_faq_ar: product?.landing_faq_ar || '[]',
     landing_gallery: product?.landing_gallery || '[]',
     landing_extra_sections: product?.landing_extra_sections || '[]',
+    landing_offers: product?.landing_offers || '[]',
   });
   const [uploadingMain, setUploadingMain] = useState(false);
   const [uploadingGallery, setUploadingGallery] = useState(false);
@@ -806,6 +808,22 @@ function ProductFormModal({
   const uploadExtraSectionImage = async (i: number, files: FileList) => {
     const url = await onUpload(files[0]);
     if (url) updateExtraSection(i, 'image', url);
+  };
+
+  // Offers helpers
+  const offers: { title: string; description: string; discount: string; active: boolean }[] = safeJsonParse(form.landing_offers, []);
+  const addOffer = () => {
+    const updated = [...offers, { title: '', description: '', discount: '', active: true }];
+    setForm(prev => ({ ...prev, landing_offers: JSON.stringify(updated) }));
+  };
+  const updateOffer = (i: number, field: string, value: string | boolean) => {
+    const updated = [...offers];
+    (updated[i] as Record<string, string | boolean>)[field] = value;
+    setForm(prev => ({ ...prev, landing_offers: JSON.stringify(updated) }));
+  };
+  const removeOffer = (i: number) => {
+    const updated = offers.filter((_, idx) => idx !== i);
+    setForm(prev => ({ ...prev, landing_offers: JSON.stringify(updated) }));
   };
 
   const sectionTabs = [
@@ -985,6 +1003,46 @@ function ProductFormModal({
                 <div>
                   <label className="form-label">شارة العرض</label>
                   <input type="text" value={form.landing_offer_badge_ar} onChange={e => setForm(p => ({ ...p, landing_offer_badge_ar: e.target.value }))} className="form-input" placeholder="خصم 50% لفترة محدودة!" />
+                </div>
+              </div>
+
+              {/* Gallery Upload in Landing Tab */}
+              <UploadZone
+                label="🖼️ معرض صور صفحة الهبوط"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                multiple
+                files={safeJsonParse(form.landing_gallery, [])}
+                onUpload={handleGalleryUpload}
+                onRemove={removeGalleryImage}
+                onReorder={reorderGallery}
+                uploading={uploadingGallery}
+                icon="🖼️"
+                hint="اسحب الصور لإعادة الترتيب - تظهر في صفحة الهبوط"
+              />
+
+              {/* Special Offers */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="form-label !mb-0">🏷️ العروض الخاصة ({offers.length})</label>
+                  <button type="button" onClick={addOffer} className="text-xs font-bold px-3 py-1.5 rounded-lg transition" style={{ backgroundColor: '#FDF8F0', color: '#8B5E3C' }}>+ إضافة عرض</button>
+                </div>
+                <div className="space-y-2">
+                  {offers.map((o, i) => (
+                    <div key={i} className="p-3 rounded-xl relative" style={{ backgroundColor: o.active ? '#FDF8F0' : '#F9F5F0', border: `1px solid ${o.active ? '#C9A94E' : '#F5EDE0'}`, opacity: o.active ? 1 : 0.7 }}>
+                      <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                        <button type="button" onClick={() => updateOffer(i, 'active', !o.active)} className={`w-8 h-4.5 rounded-full relative transition-colors ${o.active ? 'bg-green-500' : 'bg-gray-300'}`}>
+                          <span className={`absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white shadow transition-all ${o.active ? 'left-[calc(100%-16px)]' : 'left-0.5'}`} />
+                        </button>
+                        <button type="button" onClick={() => removeOffer(i)} className="w-6 h-6 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-xs hover:bg-red-200 transition">✕</button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2 mt-1">
+                        <input type="text" placeholder="عنوان العرض (مثلاً: عرض الصيف)" value={o.title} onChange={e => updateOffer(i, 'title', e.target.value)} className="form-input !py-1.5 text-xs" />
+                        <input type="text" placeholder="نسبة الخصم (مثلاً: -50% أو خصم 100 د.م)" value={o.discount} onChange={e => updateOffer(i, 'discount', e.target.value)} className="form-input !py-1.5 text-xs" />
+                      </div>
+                      <textarea placeholder="وصف العرض (مثلاً: احصلي على خصم حصري عند الطلب اليوم)" value={o.description} onChange={e => updateOffer(i, 'description', e.target.value)} className="form-input !py-1.5 text-xs" rows={2} />
+                    </div>
+                  ))}
+                  {offers.length === 0 && <p className="text-center text-xs py-4" style={{ color: '#A67B5B' }}>لم يتم إضافة عروض بعد — أضيفي عروض خاصة تظهر في صفحة الهبوط</p>}
                 </div>
               </div>
             </>

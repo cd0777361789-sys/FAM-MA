@@ -72,6 +72,7 @@ async function initDb() {
       landing_faq TEXT,
       landing_faq_ar TEXT,
       landing_extra_sections TEXT,
+      landing_offers TEXT,
       seo_title TEXT,
       seo_description TEXT,
       sort_order INTEGER DEFAULT 0,
@@ -135,6 +136,13 @@ async function initDb() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  // Add landing_offers column if it doesn't exist (migration)
+  try {
+    await db.execute('ALTER TABLE products ADD COLUMN landing_offers TEXT');
+  } catch {
+    // Column already exists, ignore
+  }
 }
 
 export default db;
