@@ -12,7 +12,7 @@ interface Product {
   landing_features_ar?: string; landing_cta_ar?: string; landing_testimonials?: string;
   landing_gallery?: string; landing_video_url?: string; landing_offer_badge_ar?: string;
   landing_faq_ar?: string; landing_extra_sections?: string; landing_offers?: string;
-  landing_detail_images?: string;
+  landing_detail_images?: string; landing_settings?: string;
 }
 interface Testimonial { name: string; city: string; text: string; rating: number; }
 interface FAQ { question: string; answer: string; }
@@ -97,6 +97,11 @@ export default function ProductLandingPage() {
         if (sz.length) setSelectedSize(sz[0]);
         if (cl.length) setSelectedColor(cl[0]);
         setStockLeft(Math.max(3, Math.min(p.stock || 12, 15)));
+        // Initialize countdown from landing_settings
+        const ls = jp<Record<string, unknown>>(p.landing_settings, {});
+        const ch = typeof ls.countdown_hours === 'number' ? ls.countdown_hours : 2;
+        const cm = typeof ls.countdown_minutes === 'number' ? ls.countdown_minutes : 45;
+        setCountdown({ h: ch, m: cm, s: 30 });
       }
       setSettings(s || {});
       setLoading(false);
@@ -105,13 +110,16 @@ export default function ProductLandingPage() {
 
   // Timer
   useEffect(() => {
+    if (!product) return;
+    const ls = jp<Record<string, unknown>>(product.landing_settings, {});
+    if (ls.countdown_enabled === false) return;
     const t = setInterval(() => setCountdown(p => {
       let { h, m, s } = p; s--;
       if (s < 0) { s = 59; m--; } if (m < 0) { m = 59; h--; } if (h < 0) { h = 23; m = 59; s = 59; }
       return { h, m, s };
     }), 1000);
     return () => clearInterval(t);
-  }, []);
+  }, [product]);
 
   // Live numbers
   useEffect(() => {
@@ -123,8 +131,15 @@ export default function ProductLandingPage() {
 
   // Social proof toasts
   useEffect(() => {
+    if (!product) return;
+    const ls = jp<Record<string, unknown>>(product.landing_settings, {});
+    if (ls.toast_enabled === false) return;
+    const customNames = Array.isArray(ls.proof_names) && ls.proof_names.length > 0
+      ? (ls.proof_names as string[]).filter(Boolean)
+      : null;
+    const names = customNames && customNames.length > 0 ? customNames : PROOF_NAMES;
     const fire = () => {
-      const name = PROOF_NAMES[Math.floor(Math.random() * PROOF_NAMES.length)];
+      const name = names[Math.floor(Math.random() * names.length)];
       const city = PROOF_CITIES[Math.floor(Math.random() * PROOF_CITIES.length)];
       const agos = ['دقيقتين', '5 دقائق', '8 دقائق', '12 دقيقة', 'ربع ساعة', '20 دقيقة'];
       setToast({ name, city, ago: agos[Math.floor(Math.random() * agos.length)] });
@@ -134,7 +149,7 @@ export default function ProductLandingPage() {
     const t1 = setTimeout(fire, 6000);
     const t2 = setInterval(fire, 22000);
     return () => { clearTimeout(t1); clearInterval(t2); };
-  }, []);
+  }, [product]);
 
   const submit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -231,6 +246,7 @@ export default function ProductLandingPage() {
   return (
     <div className="landing-page">
       {/* ===== SOCIAL PROOF TOAST ===== */}
+      {jp<Record<string, unknown>>(product.landing_settings, {}).toast_enabled !== false && (
       <div className={`landing-toast ${showToast ? 'active' : ''}`}>
         {toast && (
           <>
@@ -242,6 +258,7 @@ export default function ProductLandingPage() {
           </>
         )}
       </div>
+      )}
 
       {/* ===== LIGHTBOX ===== */}
       {lightbox !== null && (
@@ -367,6 +384,7 @@ export default function ProductLandingPage() {
                   <span className="inline-block mt-2 text-[11px] font-extrabold px-3 py-1 rounded-full text-white" style={{ background: 'linear-gradient(135deg, #C41E3A, #8B1A2B)' }}>🔥 وفّري {product.compare_price! - product.price} درهم</span>
                 )}
                 {/* Timer */}
+                {jp<Record<string, unknown>>(product.landing_settings, {}).countdown_enabled !== false && (
                 <div className="flex items-center gap-2.5 mt-4 pt-4" style={{ borderTop: '1px solid #F0E8DC' }}>
                   <span className="text-[11px] font-bold" style={{ color: '#C41E3A' }}>⏰ العرض ينتهي</span>
                   <div className="flex gap-1" dir="ltr">
@@ -378,6 +396,7 @@ export default function ProductLandingPage() {
                     ))}
                   </div>
                 </div>
+                )}
                 {/* Stock bar */}
                 <div className="mt-4 pt-4" style={{ borderTop: '1px solid #F0E8DC' }}>
                   <div className="flex items-center justify-between mb-2">

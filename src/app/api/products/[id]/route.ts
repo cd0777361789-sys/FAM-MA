@@ -42,7 +42,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       'landing_features', 'landing_features_ar', 'landing_testimonials',
       'landing_cta', 'landing_cta_ar',
       'landing_gallery', 'landing_video_url', 'landing_offer_badge', 'landing_offer_badge_ar',
-      'landing_faq', 'landing_faq_ar', 'landing_extra_sections', 'landing_offers', 'landing_detail_images',
+      'landing_faq', 'landing_faq_ar', 'landing_extra_sections', 'landing_offers', 'landing_detail_images', 'landing_settings',
       'seo_title', 'seo_description', 'sort_order',
     ];
 

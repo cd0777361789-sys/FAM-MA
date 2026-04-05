@@ -8,9 +8,9 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif'];
 const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
@@ -25,11 +25,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'لم يتم رفع ملف' }, { status: 400 });
     }
 
-    const isImage = IMAGE_TYPES.includes(file.type);
-    const isVideo = VIDEO_TYPES.includes(file.type);
+    const isImage = IMAGE_TYPES.includes(file.type) || file.name.match(/\.(jpg|jpeg|png|webp|gif|heic|heif)$/i) !== null;
+    const isVideo = VIDEO_TYPES.includes(file.type) || file.name.match(/\.(mp4|webm|mov)$/i) !== null;
 
     if (!isImage && !isVideo) {
-      return NextResponse.json({ error: 'نوع الملف غير مدعوم. الأنواع المدعومة: JPEG, PNG, WebP, GIF, MP4, WebM' }, { status: 400 });
+      return NextResponse.json({ error: 'نوع الملف غير مدعوم. الأنواع المدعومة: JPEG, PNG, WebP, GIF, HEIC, MP4, WebM' }, { status: 400 });
     }
 
     const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
