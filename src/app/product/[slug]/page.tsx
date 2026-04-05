@@ -728,13 +728,11 @@ export default function ProductLandingPage() {
 
       {/* ===== STICKY MOBILE CTA ===== */}
       <div className="landing-sticky-cta">
-        <div className="flex items-center gap-2.5 px-4 pb-4 pt-6">
-          <div className="flex-shrink-0 text-center">
-            <span className="text-[17px] font-black block" style={{ color: '#C41E3A' }}>{total}</span>
-            <span className="text-[9px] font-bold" style={{ color: '#A67B5B' }}>د.م</span>
-          </div>
-          <button onClick={scrollToOrder} className="flex-1 py-3 rounded-xl text-[13px] font-extrabold text-white shadow-lg active:scale-[0.97] transition-all" style={{ background: 'linear-gradient(135deg, #C41E3A, #8B1A2B)' }}>
-            اطلبي الآن 💰
+        <div className="flex items-center gap-3 px-4 pb-3 pt-5">
+          <button onClick={scrollToOrder} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[12px] font-extrabold text-white active:scale-[0.97] transition-all" style={{ background: 'linear-gradient(135deg, #C41E3A, #8B1A2B)', boxShadow: '0 4px 16px rgba(196,30,58,0.3)' }}>
+            <span>اطلبي الآن</span>
+            <span className="opacity-80">·</span>
+            <span>{total} د.م</span>
           </button>
         </div>
       </div>
