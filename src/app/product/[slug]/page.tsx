@@ -191,7 +191,6 @@ export default function ProductLandingPage() {
   const videoUrl = product.landing_video_url || '';
   const hasVideo = !!videoUrl;
   const allImages = [product.main_image, ...gallery].filter(Boolean) as string[];
-  const allLightboxImages = [...allImages, ...detailImages];
   const total = product.price * quantity;
 
   const swipeStart = (e: React.TouchEvent) => setTouchX(e.touches[0].clientX);
@@ -248,14 +247,14 @@ export default function ProductLandingPage() {
       {lightbox !== null && (
         <div className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center" onClick={() => setLightbox(null)}>
           <button onClick={() => setLightbox(null)} className="absolute top-4 left-4 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center text-xl z-10 hover:bg-white/20 transition">✕</button>
-          <img src={allLightboxImages[lightbox]} alt="" className="max-w-[92vw] max-h-[88vh] object-contain rounded-lg" onClick={e => e.stopPropagation()} />
-          {allLightboxImages.length > 1 && (
+          <img src={allImages[lightbox]} alt="" className="max-w-[92vw] max-h-[88vh] object-contain rounded-lg" onClick={e => e.stopPropagation()} />
+          {allImages.length > 1 && (
             <>
               <button onClick={e => { e.stopPropagation(); setLightbox(Math.max(0, lightbox - 1)); }} className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center text-lg hover:bg-white/20">→</button>
-              <button onClick={e => { e.stopPropagation(); setLightbox(Math.min(allLightboxImages.length - 1, lightbox + 1)); }} className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center text-lg hover:bg-white/20">←</button>
+              <button onClick={e => { e.stopPropagation(); setLightbox(Math.min(allImages.length - 1, lightbox + 1)); }} className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center text-lg hover:bg-white/20">←</button>
             </>
           )}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs">{lightbox + 1} / {allLightboxImages.length}</div>
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs">{lightbox + 1} / {allImages.length}</div>
         </div>
       )}
 
@@ -542,15 +541,12 @@ export default function ProductLandingPage() {
       {/* ===== DETAIL IMAGES ===== */}
       {detailImages.length > 0 && (
         <FadeSection className="py-12 md:py-16 bg-white">
-          <div className="max-w-5xl mx-auto px-4">
+          <div className="max-w-3xl mx-auto px-4">
             <SectionTitle title="تفاصيل و مميزات المنتج" sub="صور عن قرب لجودة المنتج" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+            <div className="flex flex-col gap-4 mt-8">
               {detailImages.map((img, i) => (
-                <div key={i} onClick={() => setLightbox(allImages.length + i)} className="rounded-2xl overflow-hidden cursor-pointer group relative" style={{ border: '2px solid #F0E8DC', boxShadow: '0 4px 16px rgba(139,94,60,0.08)' }}>
-                  <img src={img} alt={`تفاصيل ${product.name_ar} ${i + 1}`} className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <svg className="w-8 h-8 text-white drop-shadow-lg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>
-                  </div>
+                <div key={i} className="rounded-2xl overflow-hidden" style={{ border: '2px solid #F0E8DC', boxShadow: '0 6px 24px rgba(139,94,60,0.1)' }}>
+                  <img src={img} alt={`تفاصيل ${product.name_ar} ${i + 1}`} className="w-full h-auto" loading="lazy" />
                 </div>
               ))}
             </div>
