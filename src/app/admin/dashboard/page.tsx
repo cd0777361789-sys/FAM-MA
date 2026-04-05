@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 
 interface DashboardStats {
@@ -585,6 +585,90 @@ export default function AdminDashboard() {
   );
 }
 
+// Reusable Upload Zone Component
+function UploadZone({
+  label,
+  accept,
+  multiple,
+  files,
+  onUpload,
+  onRemove,
+  onReorder,
+  uploading,
+  icon,
+  hint,
+}: {
+  label: string;
+  accept: string;
+  multiple?: boolean;
+  files: string[];
+  onUpload: (files: FileList) => void;
+  onRemove: (index: number) => void;
+  onReorder?: (from: number, to: number) => void;
+  uploading: boolean;
+  icon: string;
+  hint: string;
+}) {
+  const [dragOver, setDragOver] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const isVideo = accept.includes('video');
+
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setDragOver(true); };
+  const handleDragLeave = () => setDragOver(false);
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (e.dataTransfer.files.length) onUpload(e.dataTransfer.files);
+  };
+
+  return (
+    <div>
+      <label className="form-label">{label}</label>
+      {files.length > 0 && (
+        <div className={`flex flex-wrap gap-2 mb-2 ${isVideo ? '' : ''}`}>
+          {files.map((url, i) => (
+            <div key={i} className="relative group" draggable={!!onReorder} onDragStart={e => e.dataTransfer.setData('text/plain', String(i))} onDragOver={e => { e.preventDefault(); }} onDrop={e => { e.preventDefault(); const from = parseInt(e.dataTransfer.getData('text/plain')); if (onReorder && from !== i) onReorder(from, i); }}>
+              <div className={`${isVideo ? 'w-32 h-20' : 'w-20 h-20'} rounded-xl overflow-hidden bg-[#F5EDE0] relative`} style={{ border: '2px solid #E8C9A0' }}>
+                {isVideo ? (
+                  <video src={url} className="w-full h-full object-cover" muted />
+                ) : (
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                )}
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                  <button type="button" onClick={() => onRemove(i)} className="w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center text-xs font-bold shadow-lg">✕</button>
+                </div>
+              </div>
+              {onReorder && <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ backgroundColor: '#8B5E3C' }}>{i + 1}</div>}
+            </div>
+          ))}
+        </div>
+      )}
+      <div
+        className={`upload-zone ${dragOver ? 'active' : ''} ${uploading ? 'opacity-60 pointer-events-none' : ''}`}
+        onClick={() => inputRef.current?.click()}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <input ref={inputRef} type="file" accept={accept} multiple={multiple} className="hidden" onChange={e => { if (e.target.files?.length) { onUpload(e.target.files); e.target.value = ''; } }} />
+        {uploading ? (
+          <div className="text-center">
+            <div className="w-8 h-8 mx-auto mb-2 rounded-full" style={{ border: '3px solid #E8C9A0', borderTopColor: '#8B5E3C', animation: 'spin 0.6s linear infinite' }} />
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            <p className="text-xs font-semibold" style={{ color: '#8B5E3C' }}>جاري الرفع...</p>
+          </div>
+        ) : (
+          <div className="text-center">
+            <span className="text-2xl block mb-1">{icon}</span>
+            <p className="text-xs font-bold" style={{ color: '#8B5E3C' }}>اضغط أو اسحب الملفات هنا</p>
+            <p className="text-[10px] mt-1" style={{ color: '#A67B5B' }}>{hint}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Product Form Modal Component
 function ProductFormModal({
   product,
@@ -599,6 +683,10 @@ function ProductFormModal({
   onClose: () => void;
   onUpload: (file: File) => Promise<string | null>;
 }) {
+  const safeJsonParse = <T,>(str: string, fallback: T): T => {
+    try { return JSON.parse(str); } catch { return fallback; }
+  };
+
   const [form, setForm] = useState({
     name: product?.name_ar ? '' : '',
     name_ar: product?.name_ar || '',
@@ -624,187 +712,362 @@ function ProductFormModal({
     landing_gallery: product?.landing_gallery || '[]',
     landing_extra_sections: product?.landing_extra_sections || '[]',
   });
-  const [uploading, setUploading] = useState(false);
+  const [uploadingMain, setUploadingMain] = useState(false);
+  const [uploadingGallery, setUploadingGallery] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [activeSection, setActiveSection] = useState<'basic' | 'media' | 'landing' | 'advanced'>('basic');
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    const url = await onUpload(file);
+  const handleMainImageUpload = async (files: FileList) => {
+    setUploadingMain(true);
+    const url = await onUpload(files[0]);
     if (url) setForm(prev => ({ ...prev, main_image: url }));
-    setUploading(false);
+    setUploadingMain(false);
   };
 
+  const handleGalleryUpload = async (files: FileList) => {
+    setUploadingGallery(true);
+    const currentGallery: string[] = safeJsonParse(form.landing_gallery, []);
+    const newUrls: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const url = await onUpload(files[i]);
+      if (url) newUrls.push(url);
+    }
+    setForm(prev => ({ ...prev, landing_gallery: JSON.stringify([...currentGallery, ...newUrls]) }));
+    setUploadingGallery(false);
+  };
+
+  const handleVideoUpload = async (files: FileList) => {
+    setUploadingVideo(true);
+    const url = await onUpload(files[0]);
+    if (url) setForm(prev => ({ ...prev, landing_video_url: url }));
+    setUploadingVideo(false);
+  };
+
+  const removeGalleryImage = (index: number) => {
+    const gallery: string[] = safeJsonParse(form.landing_gallery, []);
+    gallery.splice(index, 1);
+    setForm(prev => ({ ...prev, landing_gallery: JSON.stringify(gallery) }));
+  };
+
+  const reorderGallery = (from: number, to: number) => {
+    const gallery: string[] = safeJsonParse(form.landing_gallery, []);
+    const [moved] = gallery.splice(from, 1);
+    gallery.splice(to, 0, moved);
+    setForm(prev => ({ ...prev, landing_gallery: JSON.stringify(gallery) }));
+  };
+
+  // Testimonial helpers
+  const testimonials: { name: string; city: string; text: string; rating: number }[] = safeJsonParse(form.landing_testimonials, []);
+  const addTestimonial = () => {
+    const updated = [...testimonials, { name: '', city: '', text: '', rating: 5 }];
+    setForm(prev => ({ ...prev, landing_testimonials: JSON.stringify(updated) }));
+  };
+  const updateTestimonial = (i: number, field: string, value: string | number) => {
+    const updated = [...testimonials];
+    (updated[i] as Record<string, string | number>)[field] = value;
+    setForm(prev => ({ ...prev, landing_testimonials: JSON.stringify(updated) }));
+  };
+  const removeTestimonial = (i: number) => {
+    const updated = testimonials.filter((_, idx) => idx !== i);
+    setForm(prev => ({ ...prev, landing_testimonials: JSON.stringify(updated) }));
+  };
+
+  // FAQ helpers
+  const faqs: { question: string; answer: string }[] = safeJsonParse(form.landing_faq_ar, []);
+  const addFaq = () => {
+    const updated = [...faqs, { question: '', answer: '' }];
+    setForm(prev => ({ ...prev, landing_faq_ar: JSON.stringify(updated) }));
+  };
+  const updateFaq = (i: number, field: string, value: string) => {
+    const updated = [...faqs];
+    (updated[i] as Record<string, string>)[field] = value;
+    setForm(prev => ({ ...prev, landing_faq_ar: JSON.stringify(updated) }));
+  };
+  const removeFaq = (i: number) => {
+    const updated = faqs.filter((_, idx) => idx !== i);
+    setForm(prev => ({ ...prev, landing_faq_ar: JSON.stringify(updated) }));
+  };
+
+  // Extra sections helpers
+  const extraSections: { title: string; content: string; image?: string }[] = safeJsonParse(form.landing_extra_sections, []);
+  const addExtraSection = () => {
+    const updated = [...extraSections, { title: '', content: '' }];
+    setForm(prev => ({ ...prev, landing_extra_sections: JSON.stringify(updated) }));
+  };
+  const updateExtraSection = (i: number, field: string, value: string) => {
+    const updated = [...extraSections];
+    (updated[i] as Record<string, string>)[field] = value;
+    setForm(prev => ({ ...prev, landing_extra_sections: JSON.stringify(updated) }));
+  };
+  const removeExtraSection = (i: number) => {
+    const updated = extraSections.filter((_, idx) => idx !== i);
+    setForm(prev => ({ ...prev, landing_extra_sections: JSON.stringify(updated) }));
+  };
+  const uploadExtraSectionImage = async (i: number, files: FileList) => {
+    const url = await onUpload(files[0]);
+    if (url) updateExtraSection(i, 'image', url);
+  };
+
+  const sectionTabs = [
+    { key: 'basic' as const, label: 'أساسي', icon: '📝' },
+    { key: 'media' as const, label: 'الوسائط', icon: '🖼️' },
+    { key: 'landing' as const, label: 'صفحة الهبوط', icon: '🎯' },
+    { key: 'advanced' as const, label: 'متقدم', icon: '⚙️' },
+  ];
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 md:p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60"></div>
-      <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <div className="sticky top-0 bg-white rounded-t-3xl p-6 border-b z-10 flex items-center justify-between" style={{ borderColor: '#F5EDE0' }}>
-          <h2 className="text-lg font-bold" style={{ color: '#2C1810' }}>{product ? '✏️ تعديل المنتج' : '➕ إضافة منتج جديد'}</h2>
-          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#F5EDE0' }}>✕</button>
+      <div className="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl max-h-[95vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="bg-white rounded-t-3xl p-4 md:p-5 border-b flex items-center justify-between flex-shrink-0" style={{ borderColor: '#F5EDE0' }}>
+          <div>
+            <h2 className="text-base md:text-lg font-bold" style={{ color: '#2C1810' }}>{product ? '✏️ تعديل المنتج' : '➕ إضافة منتج جديد'}</h2>
+            <p className="text-[11px]" style={{ color: '#A67B5B' }}>املأ البيانات ثم اضغط حفظ</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#F5EDE0] transition" style={{ color: '#4A3228' }}>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
         </div>
-        <div className="p-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-bold mb-1" style={{ color: '#2C1810' }}>الاسم بالعربية *</label>
-              <input type="text" value={form.name_ar} onChange={e => setForm(p => ({ ...p, name_ar: e.target.value }))} className="w-full px-3 py-2 rounded-lg" style={{ border: '1px solid #E8C9A0' }} required />
-            </div>
-            <div>
-              <label className="block text-sm font-bold mb-1" style={{ color: '#2C1810' }}>الفئة</label>
-              <select value={form.category_id} onChange={e => setForm(p => ({ ...p, category_id: e.target.value }))} className="w-full px-3 py-2 rounded-lg" style={{ border: '1px solid #E8C9A0' }}>
-                <option value="">بدون فئة</option>
-                {categories.map(c => <option key={c.id} value={c.id}>{c.name_ar}</option>)}
-              </select>
-            </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-bold mb-1" style={{ color: '#2C1810' }}>الوصف</label>
-            <textarea value={form.description_ar} onChange={e => setForm(p => ({ ...p, description_ar: e.target.value }))} className="w-full px-3 py-2 rounded-lg" style={{ border: '1px solid #E8C9A0' }} rows={3} />
-          </div>
+        {/* Section Tabs */}
+        <div className="flex border-b flex-shrink-0 overflow-x-auto" style={{ borderColor: '#F5EDE0' }}>
+          {sectionTabs.map(tab => (
+            <button key={tab.key} onClick={() => setActiveSection(tab.key)} className={`flex-1 min-w-0 py-3 px-2 text-xs md:text-sm font-semibold text-center transition-all whitespace-nowrap ${activeSection === tab.key ? '' : 'hover:bg-[#FDF8F0]'}`} style={activeSection === tab.key ? { borderBottom: '2px solid #8B5E3C', color: '#8B5E3C' } : { color: '#A67B5B' }}>
+              <span className="hidden md:inline">{tab.icon} </span>{tab.label}
+            </button>
+          ))}
+        </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-bold mb-1" style={{ color: '#2C1810' }}>السعر *</label>
-              <input type="number" value={form.price} onChange={e => setForm(p => ({ ...p, price: Number(e.target.value) }))} className="w-full px-3 py-2 rounded-lg" style={{ border: '1px solid #E8C9A0' }} />
-            </div>
-            <div>
-              <label className="block text-sm font-bold mb-1" style={{ color: '#2C1810' }}>السعر قبل الخصم</label>
-              <input type="number" value={form.compare_price} onChange={e => setForm(p => ({ ...p, compare_price: Number(e.target.value) }))} className="w-full px-3 py-2 rounded-lg" style={{ border: '1px solid #E8C9A0' }} />
-            </div>
-            <div>
-              <label className="block text-sm font-bold mb-1" style={{ color: '#2C1810' }}>المخزون</label>
-              <input type="number" value={form.stock} onChange={e => setForm(p => ({ ...p, stock: Number(e.target.value) }))} className="w-full px-3 py-2 rounded-lg" style={{ border: '1px solid #E8C9A0' }} />
-            </div>
-          </div>
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
+          {/* BASIC SECTION */}
+          {activeSection === 'basic' && (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="form-label">الاسم بالعربية *</label>
+                  <input type="text" value={form.name_ar} onChange={e => setForm(p => ({ ...p, name_ar: e.target.value }))} className="form-input" required />
+                </div>
+                <div>
+                  <label className="form-label">الفئة</label>
+                  <select value={form.category_id} onChange={e => setForm(p => ({ ...p, category_id: e.target.value }))} className="form-input">
+                    <option value="">بدون فئة</option>
+                    {categories.map(c => <option key={c.id} value={c.id}>{c.name_ar}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="form-label">الوصف</label>
+                <textarea value={form.description_ar} onChange={e => setForm(p => ({ ...p, description_ar: e.target.value }))} className="form-input" rows={3} />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div><label className="form-label">السعر *</label><input type="number" value={form.price} onChange={e => setForm(p => ({ ...p, price: Number(e.target.value) }))} className="form-input" /></div>
+                <div><label className="form-label">السعر قبل الخصم</label><input type="number" value={form.compare_price} onChange={e => setForm(p => ({ ...p, compare_price: Number(e.target.value) }))} className="form-input" /></div>
+                <div><label className="form-label">المخزون</label><input type="number" value={form.stock} onChange={e => setForm(p => ({ ...p, stock: Number(e.target.value) }))} className="form-input" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="form-label">المقاسات (مفصولة بفاصلة)</label>
+                  <input type="text" value={(() => { try { return JSON.parse(form.sizes).join(', '); } catch { return ''; } })()} onChange={e => setForm(p => ({ ...p, sizes: JSON.stringify(e.target.value.split(',').map(s => s.trim()).filter(Boolean)) }))} className="form-input" placeholder="S, M, L, XL" />
+                </div>
+                <div>
+                  <label className="form-label">الألوان (مفصولة بفاصلة)</label>
+                  <input type="text" value={(() => { try { return JSON.parse(form.colors).join(', '); } catch { return ''; } })()} onChange={e => setForm(p => ({ ...p, colors: JSON.stringify(e.target.value.split(',').map(s => s.trim()).filter(Boolean)) }))} className="form-input" placeholder="أحمر, أزرق, أبيض" />
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-4 pt-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={form.is_featured} onChange={e => setForm(p => ({ ...p, is_featured: e.target.checked }))} className="w-4 h-4 rounded" style={{ accentColor: '#8B5E3C' }} />
+                  <span className="text-sm font-semibold" style={{ color: '#2C1810' }}>⭐ مميز</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={form.is_new} onChange={e => setForm(p => ({ ...p, is_new: e.target.checked }))} className="w-4 h-4 rounded" style={{ accentColor: '#8B5E3C' }} />
+                  <span className="text-sm font-semibold" style={{ color: '#2C1810' }}>🆕 جديد</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={form.is_active} onChange={e => setForm(p => ({ ...p, is_active: e.target.checked }))} className="w-4 h-4 rounded" style={{ accentColor: '#8B5E3C' }} />
+                  <span className="text-sm font-semibold" style={{ color: '#2C1810' }}>✅ نشط</span>
+                </label>
+              </div>
+            </>
+          )}
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-bold mb-1" style={{ color: '#2C1810' }}>المقاسات (مفصولة بفاصلة)</label>
-              <input
-                type="text"
-                value={(() => { try { return JSON.parse(form.sizes).join(', '); } catch { return ''; } })()}
-                onChange={e => setForm(p => ({ ...p, sizes: JSON.stringify(e.target.value.split(',').map(s => s.trim()).filter(Boolean)) }))}
-                className="w-full px-3 py-2 rounded-lg" style={{ border: '1px solid #E8C9A0' }}
-                placeholder="S, M, L, XL"
+          {/* MEDIA SECTION */}
+          {activeSection === 'media' && (
+            <>
+              {/* Main Image */}
+              <UploadZone
+                label="📸 الصورة الرئيسية"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                files={form.main_image ? [form.main_image] : []}
+                onUpload={handleMainImageUpload}
+                onRemove={() => setForm(prev => ({ ...prev, main_image: '' }))}
+                uploading={uploadingMain}
+                icon="📸"
+                hint="JPEG, PNG, WebP - الحد الأقصى 5 ميغابايت"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-bold mb-1" style={{ color: '#2C1810' }}>الألوان (مفصولة بفاصلة)</label>
-              <input
-                type="text"
-                value={(() => { try { return JSON.parse(form.colors).join(', '); } catch { return ''; } })()}
-                onChange={e => setForm(p => ({ ...p, colors: JSON.stringify(e.target.value.split(',').map(s => s.trim()).filter(Boolean)) }))}
-                className="w-full px-3 py-2 rounded-lg" style={{ border: '1px solid #E8C9A0' }}
-                placeholder="أحمر, أزرق, أبيض"
+
+              {/* Gallery */}
+              <UploadZone
+                label="🖼️ معرض الصور (يمكنك رفع عدة صور)"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                multiple
+                files={safeJsonParse(form.landing_gallery, [])}
+                onUpload={handleGalleryUpload}
+                onRemove={removeGalleryImage}
+                onReorder={reorderGallery}
+                uploading={uploadingGallery}
+                icon="🖼️"
+                hint="اسحب الصور لإعادة الترتيب - يمكنك رفع عدة صور مرة واحدة"
               />
-            </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-bold mb-1" style={{ color: '#2C1810' }}>صورة المنتج</label>
-            <div className="flex items-center gap-3">
-              <input type="file" accept="image/*" onChange={handleImageUpload} className="text-sm" />
-              {uploading && <span className="text-sm" style={{ color: '#8B5E3C' }}>جاري الرفع...</span>}
-            </div>
-            {form.main_image && (
-              <div className="mt-2 w-24 h-24 rounded-lg overflow-hidden">
-                <img src={form.main_image} alt="" className="w-full h-full object-cover" />
+              {/* Video */}
+              <div>
+                <label className="form-label">🎥 فيديو المنتج</label>
+                {form.landing_video_url && (
+                  <div className="mb-2 relative group">
+                    <div className="rounded-xl overflow-hidden bg-[#F5EDE0] aspect-video max-w-xs" style={{ border: '2px solid #E8C9A0' }}>
+                      {form.landing_video_url.includes('youtube') || form.landing_video_url.includes('vimeo') ? (
+                        <iframe src={form.landing_video_url} className="w-full h-full" allowFullScreen />
+                      ) : (
+                        <video src={form.landing_video_url} className="w-full h-full object-cover" controls />
+                      )}
+                    </div>
+                    <button type="button" onClick={() => setForm(prev => ({ ...prev, landing_video_url: '' }))} className="absolute top-2 right-2 w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center text-xs font-bold shadow-lg opacity-0 group-hover:opacity-100 transition">✕</button>
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <UploadZone
+                    label=""
+                    accept="video/mp4,video/webm,video/quicktime"
+                    files={[]}
+                    onUpload={handleVideoUpload}
+                    onRemove={() => {}}
+                    uploading={uploadingVideo}
+                    icon="🎥"
+                    hint="MP4, WebM - الحد الأقصى 50 ميغابايت"
+                  />
+                  <div className="relative">
+                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 border-t" style={{ borderColor: '#E8C9A0' }} />
+                    <p className="relative text-center"><span className="bg-white px-3 text-[11px] font-semibold" style={{ color: '#A67B5B' }}>أو أدخل رابط YouTube/Vimeo</span></p>
+                  </div>
+                  <input type="text" value={form.landing_video_url.includes('http') && (form.landing_video_url.includes('youtube') || form.landing_video_url.includes('vimeo')) ? form.landing_video_url : ''} onChange={e => setForm(p => ({ ...p, landing_video_url: e.target.value }))} className="form-input" dir="ltr" placeholder="https://www.youtube.com/embed/..." />
+                </div>
               </div>
-            )}
-          </div>
+            </>
+          )}
 
-          <div className="flex items-center gap-6">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={form.is_featured} onChange={e => setForm(p => ({ ...p, is_featured: e.target.checked }))} className="w-4 h-4" />
-              <span className="text-sm font-semibold" style={{ color: '#2C1810' }}>⭐ منتج مميز</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={form.is_new} onChange={e => setForm(p => ({ ...p, is_new: e.target.checked }))} className="w-4 h-4" />
-              <span className="text-sm font-semibold" style={{ color: '#2C1810' }}>🆕 منتج جديد</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={form.is_active} onChange={e => setForm(p => ({ ...p, is_active: e.target.checked }))} className="w-4 h-4" />
-              <span className="text-sm font-semibold" style={{ color: '#2C1810' }}>✅ نشط</span>
-            </label>
-          </div>
-
-          {/* Landing Page Fields */}
-          <div className="pt-4 border-t" style={{ borderColor: '#F5EDE0' }}>
-            <h3 className="font-bold mb-3" style={{ color: '#8B5E3C' }}>🎯 صفحة الهبوط</h3>
-            <div className="space-y-3">
+          {/* LANDING SECTION */}
+          {activeSection === 'landing' && (
+            <>
               <div>
-                <label className="block text-sm font-bold mb-1" style={{ color: '#2C1810' }}>عنوان صفحة الهبوط</label>
-                <input type="text" value={form.landing_title_ar} onChange={e => setForm(p => ({ ...p, landing_title_ar: e.target.value }))} className="w-full px-3 py-2 rounded-lg" style={{ border: '1px solid #E8C9A0' }} />
+                <label className="form-label">عنوان صفحة الهبوط</label>
+                <input type="text" value={form.landing_title_ar} onChange={e => setForm(p => ({ ...p, landing_title_ar: e.target.value }))} className="form-input" />
               </div>
               <div>
-                <label className="block text-sm font-bold mb-1" style={{ color: '#2C1810' }}>العنوان الفرعي</label>
-                <input type="text" value={form.landing_subtitle_ar} onChange={e => setForm(p => ({ ...p, landing_subtitle_ar: e.target.value }))} className="w-full px-3 py-2 rounded-lg" style={{ border: '1px solid #E8C9A0' }} />
+                <label className="form-label">العنوان الفرعي</label>
+                <input type="text" value={form.landing_subtitle_ar} onChange={e => setForm(p => ({ ...p, landing_subtitle_ar: e.target.value }))} className="form-input" />
               </div>
               <div>
-                <label className="block text-sm font-bold mb-1" style={{ color: '#2C1810' }}>مميزات المنتج (كل سطر = ميزة)</label>
+                <label className="form-label">مميزات المنتج (كل سطر = ميزة)</label>
                 <textarea
                   value={(() => { try { return JSON.parse(form.landing_features_ar).join('\n'); } catch { return ''; } })()}
                   onChange={e => setForm(p => ({ ...p, landing_features_ar: JSON.stringify(e.target.value.split('\n').filter(Boolean)) }))}
-                  className="w-full px-3 py-2 rounded-lg" style={{ border: '1px solid #E8C9A0' }} rows={4}
-                  placeholder="ميزة 1&#10;ميزة 2&#10;ميزة 3"
+                  className="form-input" rows={4} placeholder="ميزة 1&#10;ميزة 2&#10;ميزة 3"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-bold mb-1" style={{ color: '#2C1810' }}>نص زر الشراء (CTA)</label>
-                <input type="text" value={form.landing_cta_ar} onChange={e => setForm(p => ({ ...p, landing_cta_ar: e.target.value }))} className="w-full px-3 py-2 rounded-lg" style={{ border: '1px solid #E8C9A0' }} placeholder="اطلبي الآن!" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="form-label">نص زر الشراء (CTA)</label>
+                  <input type="text" value={form.landing_cta_ar} onChange={e => setForm(p => ({ ...p, landing_cta_ar: e.target.value }))} className="form-input" placeholder="اطلبي الآن!" />
+                </div>
+                <div>
+                  <label className="form-label">شارة العرض</label>
+                  <input type="text" value={form.landing_offer_badge_ar} onChange={e => setForm(p => ({ ...p, landing_offer_badge_ar: e.target.value }))} className="form-input" placeholder="خصم 50% لفترة محدودة!" />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-bold mb-1" style={{ color: '#2C1810' }}>شارة العرض (تظهر أعلى الصفحة)</label>
-                <input type="text" value={form.landing_offer_badge_ar} onChange={e => setForm(p => ({ ...p, landing_offer_badge_ar: e.target.value }))} className="w-full px-3 py-2 rounded-lg" style={{ border: '1px solid #E8C9A0' }} placeholder="خصم 50% لفترة محدودة!" />
-              </div>
-              <div>
-                <label className="block text-sm font-bold mb-1" style={{ color: '#2C1810' }}>رابط الفيديو (YouTube/Vimeo embed)</label>
-                <input type="text" value={form.landing_video_url} onChange={e => setForm(p => ({ ...p, landing_video_url: e.target.value }))} className="w-full px-3 py-2 rounded-lg" style={{ border: '1px solid #E8C9A0' }} dir="ltr" placeholder="https://www.youtube.com/embed/..." />
-              </div>
-              <div>
-                <label className="block text-sm font-bold mb-1" style={{ color: '#2C1810' }}>معرض الصور (روابط الصور - كل سطر = صورة)</label>
-                <textarea
-                  value={(() => { try { return JSON.parse(form.landing_gallery).join('\n'); } catch { return ''; } })()}
-                  onChange={e => setForm(p => ({ ...p, landing_gallery: JSON.stringify(e.target.value.split('\n').filter(Boolean)) }))}
-                  className="w-full px-3 py-2 rounded-lg" style={{ border: '1px solid #E8C9A0' }} rows={3} dir="ltr"
-                  placeholder="/uploads/img1.jpg&#10;/uploads/img2.jpg"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold mb-1" style={{ color: '#2C1810' }}>آراء الزبونات (JSON)</label>
-                <textarea
-                  value={form.landing_testimonials}
-                  onChange={e => setForm(p => ({ ...p, landing_testimonials: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg text-xs font-mono" style={{ border: '1px solid #E8C9A0' }} rows={4} dir="ltr"
-                  placeholder='[{"name":"فاطمة","city":"الدار البيضاء","text":"منتج رائع!","rating":5}]'
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold mb-1" style={{ color: '#2C1810' }}>الأسئلة الشائعة (JSON)</label>
-                <textarea
-                  value={form.landing_faq_ar}
-                  onChange={e => setForm(p => ({ ...p, landing_faq_ar: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg text-xs font-mono" style={{ border: '1px solid #E8C9A0' }} rows={4} dir="ltr"
-                  placeholder='[{"question":"هل التوصيل مجاني؟","answer":"نعم، التوصيل مجاني لجميع المدن"}]'
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold mb-1" style={{ color: '#2C1810' }}>أقسام إضافية (JSON)</label>
-                <textarea
-                  value={form.landing_extra_sections}
-                  onChange={e => setForm(p => ({ ...p, landing_extra_sections: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg text-xs font-mono" style={{ border: '1px solid #E8C9A0' }} rows={3} dir="ltr"
-                  placeholder='[{"title":"العنوان","content":"المحتوى","image":"/uploads/img.jpg"}]'
-                />
-              </div>
-            </div>
-          </div>
+            </>
+          )}
 
-          <button
-            onClick={() => onSave(form)}
-            className="btn-moroccan w-full py-3 rounded-xl text-lg"
-          >
+          {/* ADVANCED SECTION */}
+          {activeSection === 'advanced' && (
+            <>
+              {/* Testimonials */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="form-label !mb-0">⭐ آراء الزبونات ({testimonials.length})</label>
+                  <button type="button" onClick={addTestimonial} className="text-xs font-bold px-3 py-1.5 rounded-lg transition" style={{ backgroundColor: '#FDF8F0', color: '#8B5E3C' }}>+ إضافة رأي</button>
+                </div>
+                <div className="space-y-2">
+                  {testimonials.map((t, i) => (
+                    <div key={i} className="p-3 rounded-xl relative" style={{ backgroundColor: '#FDF8F0', border: '1px solid #F5EDE0' }}>
+                      <button type="button" onClick={() => removeTestimonial(i)} className="absolute top-2 left-2 w-6 h-6 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-xs hover:bg-red-200 transition">✕</button>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
+                        <input type="text" placeholder="الاسم" value={t.name} onChange={e => updateTestimonial(i, 'name', e.target.value)} className="form-input !py-1.5 text-xs" />
+                        <input type="text" placeholder="المدينة" value={t.city} onChange={e => updateTestimonial(i, 'city', e.target.value)} className="form-input !py-1.5 text-xs" />
+                        <select value={t.rating} onChange={e => updateTestimonial(i, 'rating', Number(e.target.value))} className="form-input !py-1.5 text-xs">
+                          {[5, 4, 3, 2, 1].map(r => <option key={r} value={r}>{r} ⭐</option>)}
+                        </select>
+                      </div>
+                      <textarea placeholder="نص الرأي..." value={t.text} onChange={e => updateTestimonial(i, 'text', e.target.value)} className="form-input !py-1.5 text-xs" rows={2} />
+                    </div>
+                  ))}
+                  {testimonials.length === 0 && <p className="text-center text-xs py-4" style={{ color: '#A67B5B' }}>لم يتم إضافة آراء بعد</p>}
+                </div>
+              </div>
+
+              {/* FAQs */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="form-label !mb-0">❓ الأسئلة الشائعة ({faqs.length})</label>
+                  <button type="button" onClick={addFaq} className="text-xs font-bold px-3 py-1.5 rounded-lg transition" style={{ backgroundColor: '#FDF8F0', color: '#8B5E3C' }}>+ إضافة سؤال</button>
+                </div>
+                <div className="space-y-2">
+                  {faqs.map((f, i) => (
+                    <div key={i} className="p-3 rounded-xl relative" style={{ backgroundColor: '#FDF8F0', border: '1px solid #F5EDE0' }}>
+                      <button type="button" onClick={() => removeFaq(i)} className="absolute top-2 left-2 w-6 h-6 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-xs hover:bg-red-200 transition">✕</button>
+                      <input type="text" placeholder="السؤال" value={f.question} onChange={e => updateFaq(i, 'question', e.target.value)} className="form-input !py-1.5 text-xs mb-2" />
+                      <textarea placeholder="الجواب" value={f.answer} onChange={e => updateFaq(i, 'answer', e.target.value)} className="form-input !py-1.5 text-xs" rows={2} />
+                    </div>
+                  ))}
+                  {faqs.length === 0 && <p className="text-center text-xs py-4" style={{ color: '#A67B5B' }}>لم يتم إضافة أسئلة بعد</p>}
+                </div>
+              </div>
+
+              {/* Extra Sections */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="form-label !mb-0">📄 أقسام إضافية ({extraSections.length})</label>
+                  <button type="button" onClick={addExtraSection} className="text-xs font-bold px-3 py-1.5 rounded-lg transition" style={{ backgroundColor: '#FDF8F0', color: '#8B5E3C' }}>+ إضافة قسم</button>
+                </div>
+                <div className="space-y-2">
+                  {extraSections.map((sec, i) => (
+                    <div key={i} className="p-3 rounded-xl relative" style={{ backgroundColor: '#FDF8F0', border: '1px solid #F5EDE0' }}>
+                      <button type="button" onClick={() => removeExtraSection(i)} className="absolute top-2 left-2 w-6 h-6 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-xs hover:bg-red-200 transition">✕</button>
+                      <input type="text" placeholder="عنوان القسم" value={sec.title} onChange={e => updateExtraSection(i, 'title', e.target.value)} className="form-input !py-1.5 text-xs mb-2" />
+                      <textarea placeholder="المحتوى" value={sec.content} onChange={e => updateExtraSection(i, 'content', e.target.value)} className="form-input !py-1.5 text-xs mb-2" rows={3} />
+                      <div className="flex items-center gap-2">
+                        {sec.image && <div className="w-12 h-12 rounded-lg overflow-hidden bg-white"><img src={sec.image} alt="" className="w-full h-full object-cover" /></div>}
+                        <label className="text-[11px] font-semibold px-3 py-1.5 rounded-lg cursor-pointer transition hover:opacity-80" style={{ backgroundColor: '#E8C9A0', color: '#4A3228' }}>
+                          📸 {sec.image ? 'تغيير الصورة' : 'إضافة صورة'}
+                          <input type="file" accept="image/*" className="hidden" onChange={e => { if (e.target.files?.length) uploadExtraSectionImage(i, e.target.files); }} />
+                        </label>
+                        {sec.image && <button type="button" onClick={() => updateExtraSection(i, 'image', '')} className="text-[11px] text-red-500 font-semibold">حذف الصورة</button>}
+                      </div>
+                    </div>
+                  ))}
+                  {extraSections.length === 0 && <p className="text-center text-xs py-4" style={{ color: '#A67B5B' }}>لم يتم إضافة أقسام بعد</p>}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="bg-white border-t p-4 flex-shrink-0 flex items-center gap-3" style={{ borderColor: '#F5EDE0' }}>
+          <button onClick={onClose} className="px-5 py-2.5 rounded-xl text-sm font-semibold transition hover:bg-[#F5EDE0]" style={{ color: '#4A3228' }}>إلغاء</button>
+          <button onClick={() => onSave(form)} className="btn-moroccan flex-1 py-2.5 rounded-xl text-sm">
             {product ? '💾 حفظ التعديلات' : '➕ إضافة المنتج'}
           </button>
         </div>

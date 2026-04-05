@@ -8,6 +8,11 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
+
 export async function POST(req: NextRequest) {
   const auth = authenticateAdmin(req);
   if (auth instanceof NextResponse) return auth;
@@ -20,21 +25,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'لم يتم رفع ملف' }, { status: 400 });
     }
 
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-    if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json({ error: 'نوع الملف غير مدعوم' }, { status: 400 });
+    const isImage = IMAGE_TYPES.includes(file.type);
+    const isVideo = VIDEO_TYPES.includes(file.type);
+
+    if (!isImage && !isVideo) {
+      return NextResponse.json({ error: 'نوع الملف غير مدعوم. الأنواع المدعومة: JPEG, PNG, WebP, GIF, MP4, WebM' }, { status: 400 });
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json({ error: 'حجم الملف كبير جداً (الحد الأقصى 5 ميغابايت)' }, { status: 400 });
+    const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+    if (file.size > maxSize) {
+      const limitMB = maxSize / (1024 * 1024);
+      return NextResponse.json({ error: `حجم الملف كبير جداً (الحد الأقصى ${limitMB} ميغابايت)` }, { status: 400 });
     }
 
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
+    const resourceType = isVideo ? 'video' : 'image';
 
-    const result = await new Promise<{ secure_url: string }>((resolve, reject) => {
+    const result = await new Promise<{ secure_url: string; resource_type: string }>((resolve, reject) => {
       cloudinary.uploader.upload_stream(
-        { folder: 'fam-ma', resource_type: 'image' },
+        { folder: 'fam-ma', resource_type: resourceType },
         (error, result) => {
           if (error || !result) reject(error || new Error('Upload failed'));
           else resolve(result);
@@ -42,7 +52,11 @@ export async function POST(req: NextRequest) {
       ).end(buffer);
     });
 
-    return NextResponse.json({ url: result.secure_url, filename: result.secure_url });
+    return NextResponse.json({
+      url: result.secure_url,
+      resource_type: result.resource_type,
+      filename: file.name,
+    });
   } catch {
     return NextResponse.json({ error: 'خطأ في رفع الملف' }, { status: 500 });
   }
