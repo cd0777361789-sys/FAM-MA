@@ -57,7 +57,9 @@ export async function POST(req: NextRequest) {
       resource_type: result.resource_type,
       filename: file.name,
     });
-  } catch {
-    return NextResponse.json({ error: 'خطأ في رفع الملف' }, { status: 500 });
+  } catch (e) {
+    console.error('Upload error:', e);
+    const message = e instanceof Error ? e.message : 'خطأ في رفع الملف';
+    return NextResponse.json({ error: `خطأ في رفع الملف: ${message}` }, { status: 500 });
   }
 }

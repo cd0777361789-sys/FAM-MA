@@ -207,18 +207,24 @@ export default function AdminDashboard() {
   };
 
   const uploadImage = async (file: File): Promise<string | null> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    const res = await fetch('/api/upload', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    });
-    if (res.ok) {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
       const data = await res.json();
-      return data.url;
+      if (res.ok && data.url) {
+        return data.url;
+      }
+      alert(`خطأ في رفع الصورة: ${data.error || 'فشل الرفع'}`);
+      return null;
+    } catch (err) {
+      alert(`خطأ في الاتصال أثناء رفع الصورة: ${err instanceof Error ? err.message : 'خطأ غير معروف'}`);
+      return null;
     }
-    return null;
   };
 
   const handleLogout = () => {
@@ -721,27 +727,35 @@ function ProductFormModal({
 
   const handleMainImageUpload = async (files: FileList) => {
     setUploadingMain(true);
-    const url = await onUpload(files[0]);
-    if (url) setForm(prev => ({ ...prev, main_image: url }));
+    try {
+      const url = await onUpload(files[0]);
+      if (url) setForm(prev => ({ ...prev, main_image: url }));
+    } catch { /* error handled in onUpload */ }
     setUploadingMain(false);
   };
 
   const handleGalleryUpload = async (files: FileList) => {
     setUploadingGallery(true);
-    const currentGallery: string[] = safeJsonParse(form.landing_gallery, []);
-    const newUrls: string[] = [];
-    for (let i = 0; i < files.length; i++) {
-      const url = await onUpload(files[i]);
-      if (url) newUrls.push(url);
-    }
-    setForm(prev => ({ ...prev, landing_gallery: JSON.stringify([...currentGallery, ...newUrls]) }));
+    try {
+      const currentGallery: string[] = safeJsonParse(form.landing_gallery, []);
+      const newUrls: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const url = await onUpload(files[i]);
+        if (url) newUrls.push(url);
+      }
+      if (newUrls.length > 0) {
+        setForm(prev => ({ ...prev, landing_gallery: JSON.stringify([...currentGallery, ...newUrls]) }));
+      }
+    } catch { /* error handled in onUpload */ }
     setUploadingGallery(false);
   };
 
   const handleVideoUpload = async (files: FileList) => {
     setUploadingVideo(true);
-    const url = await onUpload(files[0]);
-    if (url) setForm(prev => ({ ...prev, landing_video_url: url }));
+    try {
+      const url = await onUpload(files[0]);
+      if (url) setForm(prev => ({ ...prev, landing_video_url: url }));
+    } catch { /* error handled in onUpload */ }
     setUploadingVideo(false);
   };
 
