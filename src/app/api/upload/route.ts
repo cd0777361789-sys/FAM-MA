@@ -59,7 +59,8 @@ export async function POST(req: NextRequest) {
     });
   } catch (e) {
     console.error('Upload error:', e);
-    const message = e instanceof Error ? e.message : 'خطأ في رفع الملف';
-    return NextResponse.json({ error: `خطأ في رفع الملف: ${message}` }, { status: 500 });
+    const errObj = e as { message?: string; http_code?: number };
+    const message = errObj?.message || 'خطأ غير معروف';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
