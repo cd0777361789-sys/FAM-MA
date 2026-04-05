@@ -73,6 +73,7 @@ async function initDb() {
       landing_faq_ar TEXT,
       landing_extra_sections TEXT,
       landing_offers TEXT,
+      landing_detail_images TEXT,
       seo_title TEXT,
       seo_description TEXT,
       sort_order INTEGER DEFAULT 0,
@@ -137,12 +138,9 @@ async function initDb() {
     );
   `);
 
-  // Add landing_offers column if it doesn't exist (migration)
-  try {
-    await db.execute('ALTER TABLE products ADD COLUMN landing_offers TEXT');
-  } catch {
-    // Column already exists, ignore
-  }
+  // Add new columns if they don't exist (migration)
+  try { await db.execute('ALTER TABLE products ADD COLUMN landing_offers TEXT'); } catch { /* exists */ }
+  try { await db.execute('ALTER TABLE products ADD COLUMN landing_detail_images TEXT'); } catch { /* exists */ }
 }
 
 export default db;

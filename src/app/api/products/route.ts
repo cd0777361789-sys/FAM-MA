@@ -37,9 +37,9 @@ export async function POST(req: NextRequest) {
         landing_title, landing_title_ar, landing_subtitle, landing_subtitle_ar,
         landing_features, landing_features_ar, landing_testimonials, landing_cta, landing_cta_ar,
         landing_gallery, landing_video_url, landing_offer_badge, landing_offer_badge_ar,
-        landing_faq, landing_faq_ar, landing_extra_sections, landing_offers,
+        landing_faq, landing_faq_ar, landing_extra_sections, landing_offers, landing_detail_images,
         seo_title, seo_description, sort_order)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         id, data.name || '', data.name_ar || '', finalSlug,
         data.description || '', data.description_ar || '',
@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
         data.landing_faq || '[]', data.landing_faq_ar || '[]',
         data.landing_extra_sections || '[]',
         data.landing_offers || '[]',
+        data.landing_detail_images || '[]',
         data.seo_title || '', data.seo_description || '',
         data.sort_order || 0,
       ],

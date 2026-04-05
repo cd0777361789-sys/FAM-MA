@@ -54,6 +54,7 @@ interface Product {
   landing_faq_ar?: string;
   landing_extra_sections?: string;
   landing_offers?: string;
+  landing_detail_images?: string;
   category_id?: string;
 }
 
@@ -719,9 +720,11 @@ function ProductFormModal({
     landing_gallery: product?.landing_gallery || '[]',
     landing_extra_sections: product?.landing_extra_sections || '[]',
     landing_offers: product?.landing_offers || '[]',
+    landing_detail_images: product?.landing_detail_images || '[]',
   });
   const [uploadingMain, setUploadingMain] = useState(false);
   const [uploadingGallery, setUploadingGallery] = useState(false);
+  const [uploadingDetail, setUploadingDetail] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [activeSection, setActiveSection] = useState<'basic' | 'media' | 'landing' | 'advanced'>('basic');
 
@@ -770,6 +773,34 @@ function ProductFormModal({
     const [moved] = gallery.splice(from, 1);
     gallery.splice(to, 0, moved);
     setForm(prev => ({ ...prev, landing_gallery: JSON.stringify(gallery) }));
+  };
+
+  // Detail images handlers
+  const handleDetailUpload = async (files: FileList) => {
+    setUploadingDetail(true);
+    try {
+      const current: string[] = safeJsonParse(form.landing_detail_images, []);
+      const newUrls: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const url = await onUpload(files[i]);
+        if (url) newUrls.push(url);
+      }
+      if (newUrls.length > 0) {
+        setForm(prev => ({ ...prev, landing_detail_images: JSON.stringify([...current, ...newUrls]) }));
+      }
+    } catch { /* error handled in onUpload */ }
+    setUploadingDetail(false);
+  };
+  const removeDetailImage = (index: number) => {
+    const imgs: string[] = safeJsonParse(form.landing_detail_images, []);
+    imgs.splice(index, 1);
+    setForm(prev => ({ ...prev, landing_detail_images: JSON.stringify(imgs) }));
+  };
+  const reorderDetailImages = (from: number, to: number) => {
+    const imgs: string[] = safeJsonParse(form.landing_detail_images, []);
+    const [moved] = imgs.splice(from, 1);
+    imgs.splice(to, 0, moved);
+    setForm(prev => ({ ...prev, landing_detail_images: JSON.stringify(imgs) }));
   };
 
   // Testimonial helpers
@@ -1020,18 +1051,18 @@ function ProductFormModal({
                 </div>
               </div>
 
-              {/* Gallery Upload in Landing Tab */}
+              {/* Detail Images Upload in Landing Tab */}
               <UploadZone
-                label="🖼️ معرض صور صفحة الهبوط"
+                label="📸 صور تفاصيل المنتج"
                 accept="image/jpeg,image/png,image/webp,image/gif"
                 multiple
-                files={safeJsonParse(form.landing_gallery, [])}
-                onUpload={handleGalleryUpload}
-                onRemove={removeGalleryImage}
-                onReorder={reorderGallery}
-                uploading={uploadingGallery}
-                icon="🖼️"
-                hint="اسحب الصور لإعادة الترتيب - تظهر في صفحة الهبوط"
+                files={safeJsonParse(form.landing_detail_images, [])}
+                onUpload={handleDetailUpload}
+                onRemove={removeDetailImage}
+                onReorder={reorderDetailImages}
+                uploading={uploadingDetail}
+                icon="📸"
+                hint="أضيفي صور التفاصيل والمميزات — تظهر في صفحة الهبوط"
               />
 
               {/* Special Offers */}
