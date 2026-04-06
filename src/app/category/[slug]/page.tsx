@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { useCart } from '@/lib/cart-context';
 
 interface Product {
   id: string;
@@ -29,6 +30,7 @@ export default function CategoryPage() {
   const [category, setCategory] = useState<Category | null>(null);
   const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const { addItem, totalItems } = useCart();
 
   useEffect(() => {
     const slug = params.slug as string;
@@ -89,7 +91,13 @@ export default function CategoryPage() {
               <p className="text-[10px] font-amiri" style={{ color: '#D4A574' }}>أزياء مغربية أصيلة</p>
             </div>
           </Link>
-          <div className="cod-badge text-xs">💰 الدفع عند الاستلام</div>
+          <div className="flex items-center gap-2.5">
+            <Link href="/cart" className="relative p-2 rounded-lg hover:bg-[#8B5E3C10] transition">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="#8B5E3C" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" /></svg>
+              {totalItems > 0 && <span className="absolute -top-0.5 -left-0.5 w-5 h-5 rounded-full text-white text-[10px] font-bold flex items-center justify-center" style={{ backgroundColor: '#C41E3A' }}>{totalItems}</span>}
+            </Link>
+            <div className="cod-badge text-xs">💰 الدفع عند الاستلام</div>
+          </div>
         </div>
       </header>
 
@@ -128,27 +136,35 @@ export default function CategoryPage() {
             {products.map((product, idx) => {
               const discount = product.compare_price ? Math.round(((product.compare_price - product.price) / product.compare_price) * 100) : 0;
               return (
-                <Link key={product.id} href={`/product/${product.slug}`} className="product-card block rounded-2xl overflow-hidden bg-white animate-fade-in-up" style={{ animationDelay: `${idx * 0.06}s` }}>
-                  <div className="relative aspect-[3/4] overflow-hidden" style={{ backgroundColor: '#F5EDE0' }}>
-                    {product.main_image ? (
-                      <img src={product.main_image} alt={product.name_ar} className="product-image w-full h-full object-cover" loading="lazy" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center"><span className="text-5xl opacity-30">✦</span></div>
-                    )}
-                    {discount > 0 && <span className="discount-badge">-{discount}%</span>}
-                    {product.is_new ? <span className="absolute top-2 left-2 text-white text-[10px] font-bold px-2 py-0.5 rounded-full z-10" style={{ backgroundColor: '#006233' }}>جديد</span> : null}
-                  </div>
-                  <div className="p-3 md:p-4">
-                    <h3 className="font-bold text-sm mb-2 leading-snug line-clamp-2" style={{ color: '#2C1810' }}>{product.name_ar}</h3>
-                    <div className="flex items-center gap-2">
-                      <span className="text-base font-extrabold" style={{ color: '#C41E3A' }}>{product.price} <span className="text-xs font-bold">د.م</span></span>
-                      {product.compare_price && <span className="text-xs line-through opacity-40" style={{ color: '#4A3228' }}>{product.compare_price}</span>}
+                <div key={product.id} className="product-card block rounded-2xl overflow-hidden bg-white animate-fade-in-up" style={{ animationDelay: `${idx * 0.06}s` }}>
+                  <Link href={`/product/${product.slug}`} className="block">
+                    <div className="relative aspect-[3/4] overflow-hidden" style={{ backgroundColor: '#F5EDE0' }}>
+                      {product.main_image ? (
+                        <img src={product.main_image} alt={product.name_ar} className="product-image w-full h-full object-cover" loading="lazy" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center"><span className="text-5xl opacity-30">✦</span></div>
+                      )}
+                      {discount > 0 && <span className="discount-badge">-{discount}%</span>}
+                      {product.is_new ? <span className="absolute top-2 left-2 text-white text-[10px] font-bold px-2 py-0.5 rounded-full z-10" style={{ backgroundColor: '#006233' }}>جديد</span> : null}
                     </div>
-                    <div className="mt-2.5 w-full text-center py-2 rounded-xl text-xs font-bold transition-all" style={{ backgroundColor: '#8B5E3C', color: 'white' }}>
-                      اطلبي الآن
+                    <div className="p-3 md:p-4 pb-1">
+                      <h3 className="font-bold text-sm mb-2 leading-snug line-clamp-2" style={{ color: '#2C1810' }}>{product.name_ar}</h3>
+                      <div className="flex items-center gap-2">
+                        <span className="text-base font-extrabold" style={{ color: '#C41E3A' }}>{product.price} <span className="text-xs font-bold">د.م</span></span>
+                        {product.compare_price && <span className="text-xs line-through opacity-40" style={{ color: '#4A3228' }}>{product.compare_price}</span>}
+                      </div>
                     </div>
+                  </Link>
+                  <div className="px-3 md:px-4 pb-3 md:pb-4 flex gap-2">
+                    <button onClick={() => addItem({ id: product.id, name_ar: product.name_ar, slug: product.slug, price: product.price, compare_price: product.compare_price, main_image: product.main_image })}
+                      className="flex-1 text-center py-2 rounded-xl text-xs font-bold transition-all hover:opacity-90" style={{ backgroundColor: '#8B5E3C', color: 'white' }}>
+                      أضيفي للسلة 🛒
+                    </button>
+                    <Link href={`/product/${product.slug}`} className="py-2 px-3 rounded-xl text-xs font-bold transition-all hover:bg-[#F5EDE0]" style={{ border: '1px solid #E8C9A0', color: '#8B5E3C' }}>
+                      التفاصيل
+                    </Link>
                   </div>
-                </Link>
+                </div>
               );
             })}
           </div>

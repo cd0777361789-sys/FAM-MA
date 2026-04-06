@@ -217,6 +217,13 @@ export default function AdminDashboard() {
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
+      if (res.status === 401) {
+        alert('انتهت صلاحية الجلسة — سيتم إعادة تسجيل الدخول');
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_user');
+        window.location.href = '/admin';
+        return null;
+      }
       const data = await res.json();
       if (res.ok && data.url) {
         return data.url;

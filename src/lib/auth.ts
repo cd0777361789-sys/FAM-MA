@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fam-ma-secret-key-change-in-production-2024';
-const JWT_EXPIRES_IN = '7d';
+const JWT_EXPIRES_IN = '30d';
 
 export function hashPassword(password: string): string {
   return bcrypt.hashSync(password, 12);

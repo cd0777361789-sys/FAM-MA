@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { useCart } from '@/lib/cart-context';
 
 interface Product {
   id: string; name_ar: string; slug: string; description_ar: string;
@@ -83,6 +84,7 @@ export default function ProductLandingPage() {
   const [testimonialIdx, setTestimonialIdx] = useState(0);
   const [testimonialTouchX, setTestimonialTouchX] = useState(0);
   const orderRef = useRef<HTMLDivElement>(null);
+  const { addItem, totalItems } = useCart();
 
   useEffect(() => {
     const slug = params.slug as string;
@@ -292,6 +294,10 @@ export default function ProductLandingPage() {
           </Link>
           <div className="flex items-center gap-2.5">
             <div className="landing-live-badge"><span className="landing-live-dot" />{liveViewers} يشاهدن</div>
+            <Link href="/cart" className="relative w-9 h-9 rounded-full flex items-center justify-center" style={{ background: '#F5EDE0' }}>
+              <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="#8B5E3C" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" /></svg>
+              {totalItems > 0 && <span className="absolute -top-1 -right-1 w-4.5 h-4.5 rounded-full flex items-center justify-center text-[9px] font-bold text-white" style={{ background: '#C41E3A' }}>{totalItems}</span>}
+            </Link>
             <button onClick={scrollToOrder} className="hidden md:block px-4 py-1.5 rounded-lg text-[11px] font-bold text-white" style={{ background: 'linear-gradient(135deg, #C41E3A, #A01830)' }}>اطلبي الآن</button>
           </div>
         </div>
@@ -439,12 +445,17 @@ export default function ProductLandingPage() {
               </div>
 
               {/* CTA */}
-              <button onClick={scrollToOrder} className="landing-cta">
-                <span className="landing-cta-glow" />
-                <span className="relative z-10 flex items-center justify-center gap-2 text-[15px]">
-                  {product.landing_cta_ar || '🛒 اطلبي الآن — الدفع عند الاستلام'}
-                </span>
-              </button>
+              <div className="flex gap-2">
+                <button onClick={scrollToOrder} className="landing-cta flex-1">
+                  <span className="landing-cta-glow" />
+                  <span className="relative z-10 flex items-center justify-center gap-2 text-[15px]">
+                    {product.landing_cta_ar || '🛒 اطلبي الآن — الدفع عند الاستلام'}
+                  </span>
+                </button>
+                <button onClick={() => { addItem({ id: product.id, name_ar: product.name_ar, slug: product.slug, price: product.price, compare_price: product.compare_price, main_image: product.main_image, selectedSize, selectedColor }, quantity); }} className="flex items-center justify-center w-14 rounded-2xl transition-all hover:opacity-90" style={{ background: '#8B5E3C', color: 'white' }} title="أضيفي للسلة">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" /></svg>
+                </button>
+              </div>
 
               {/* Trust row */}
               <div className="grid grid-cols-2 gap-2">
@@ -795,11 +806,14 @@ export default function ProductLandingPage() {
 
       {/* ===== STICKY MOBILE CTA ===== */}
       <div className="landing-sticky-cta">
-        <div className="flex items-center gap-3 px-4 pb-3 pt-5">
+        <div className="flex items-center gap-2 px-4 pb-3 pt-5">
           <button onClick={scrollToOrder} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[12px] font-extrabold text-white active:scale-[0.97] transition-all" style={{ background: 'linear-gradient(135deg, #C41E3A, #8B1A2B)', boxShadow: '0 4px 16px rgba(196,30,58,0.3)' }}>
             <span>اطلبي الآن</span>
             <span className="opacity-80">·</span>
             <span>{total} د.م</span>
+          </button>
+          <button onClick={() => { addItem({ id: product.id, name_ar: product.name_ar, slug: product.slug, price: product.price, compare_price: product.compare_price, main_image: product.main_image, selectedSize, selectedColor }, quantity); }} className="flex items-center justify-center w-12 h-11 rounded-xl text-white active:scale-[0.97] transition-all" style={{ background: '#8B5E3C', boxShadow: '0 4px 12px rgba(139,94,60,0.3)' }}>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" /></svg>
           </button>
         </div>
       </div>
