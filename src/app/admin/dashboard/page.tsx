@@ -1,3 +1,4 @@
+              { key: 'fb_capi_token', label: 'Facebook Conversion API Token (Dataset Quality API)' },
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -603,6 +604,22 @@ export default function AdminDashboard() {
                   placeholder="مثال: 1594179298355815 أو الصق كود البيكسل كاملًا هنا"
                 />
                 <div className="text-xs text-gray-500 mt-1">يمكنك وضع رقم البيكسل فقط أو الكود الكامل من فيسبوك</div>
+              </div>
+              {/* Facebook Conversion API Token Field */}
+              <div className="mb-3">
+                <label className="block text-sm font-semibold mb-1" style={{ color: '#4A3228' }}>
+                  Facebook Conversion API Token
+                  <span className="text-xs text-gray-400 ml-2">لربط الأحداث مباشرة مع Facebook (Dataset Quality API)</span>
+                </label>
+                <input
+                  type="text"
+                  value={settings['fb_capi_token'] || ''}
+                  onChange={e => setSettings(prev => ({ ...prev, fb_capi_token: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg text-sm font-mono"
+                  style={{ border: '1px solid #E8C9A0', color: '#2C1810', direction: 'ltr' }}
+                  placeholder="الصق التوكن هنا..."
+                />
+                <div className="text-xs text-gray-500 mt-1">استخدم التوكن من إعدادات Dataset Quality API في Facebook Events Manager</div>
               </div>
               </div>
 

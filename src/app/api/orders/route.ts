@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { authenticateAdmin, generateOrderNumber } from '@/lib/utils';
+import { sendFacebookPurchaseEvent } from '@/lib/fb-capi';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function GET(req: NextRequest) {
@@ -72,6 +73,21 @@ export async function POST(req: NextRequest) {
         data.notes || '', data.source || 'landing',
       ],
     });
+
+    // إرسال الحدث إلى Facebook Conversion API (Purchase)
+    sendFacebookPurchaseEvent({
+      eventId: id,
+      eventTime: Math.floor(Date.now() / 1000),
+      value: totalPrice,
+      currency: 'MAD',
+      customer: {
+        name: data.customer_name,
+        phone: data.customer_phone.replace(/\s/g, ''),
+        city: data.customer_city,
+        address: data.customer_address,
+      },
+      orderNumber,
+    }).catch(() => {});
 
     return NextResponse.json({ order_number: orderNumber, message: 'تم تأكيد طلبك بنجاح! سنتواصل معك قريباً' }, { status: 201 });
   } catch (e) {
