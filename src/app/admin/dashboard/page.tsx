@@ -588,6 +588,22 @@ export default function AdminDashboard() {
                     />
                   </div>
                 ))}
+              {/* Meta Pixel Code Field */}
+              <div className="mb-3">
+                <label className="block text-sm font-semibold mb-1" style={{ color: '#4A3228' }}>
+                  Meta Pixel (Facebook Pixel) Code
+                  <span className="text-xs text-gray-400 ml-2">يمكنك لصق كود البيكسل أو فقط رقم Pixel ID</span>
+                </label>
+                <textarea
+                  value={settings['meta_pixel'] || ''}
+                  onChange={e => setSettings(prev => ({ ...prev, meta_pixel: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg text-sm font-mono"
+                  style={{ border: '1px solid #E8C9A0', color: '#2C1810', direction: 'ltr' }}
+                  rows={4}
+                  placeholder="مثال: 1594179298355815 أو الصق كود البيكسل كاملًا هنا"
+                />
+                <div className="text-xs text-gray-500 mt-1">يمكنك وضع رقم البيكسل فقط أو الكود الكامل من فيسبوك</div>
+              </div>
               </div>
 
               <button onClick={saveSettings} className="btn-moroccan w-full py-3 rounded-xl text-lg">
